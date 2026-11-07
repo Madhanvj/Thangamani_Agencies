@@ -1,3 +1,4 @@
+import type { LedgerStatement, KhataSummary } from '../types';
 import { apiClient } from './client';
 import type {
   User,
@@ -98,7 +99,19 @@ export const inventoryApi = {
 
 // Customers
 export const customersApi = {
-  getCustomers: async (params?: { page?: number; limit?: number; search?: string }): Promise<CustomerListResponse> => {
+  getKhataSummary: async (): Promise<KhataSummary> => (await apiClient.get('/customers/khata/summary')).data,
+  collectPayment: async (id: number, data: { amount: number; payment_mode: string; payment_date: string; reference_number?: string; notes?: string }): Promise<Payment[]> =>
+    (await apiClient.post(`/customers/${id}/payments`, data)).data,
+  getStatement: async (id: number, params?: { start_date?: string; end_date?: string }): Promise<LedgerStatement> =>
+    (await apiClient.get(`/customers/${id}/statement`, { params })).data,
+  downloadStatement: async (id: number, params?: { start_date?: string; end_date?: string }) => {
+    const res = await apiClient.get(`/customers/${id}/statement/pdf`, { params, responseType: 'blob' });
+    const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+    const link = document.createElement('a');
+    link.href = url; link.download = `Statement_${id}.pdf`; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  },
+  getCustomers: async (params?: { page?: number; limit?: number; search?: string; customer_type?: 'RETAIL' | 'VENDOR' }): Promise<CustomerListResponse> => {
     const res = await apiClient.get('/customers', { params });
     return res.data;
   },
@@ -127,6 +140,7 @@ export const customersApi = {
 // Invoices
 export interface CreateInvoicePayload {
   customer: {
+    customer_type?: 'RETAIL' | 'VENDOR';
     id?: number;
     name: string;
     phone: string;
@@ -139,8 +153,10 @@ export interface CreateInvoicePayload {
     product_id: number;
     quantity: number;
     unit_price?: number;
+    price_includes_gst?: boolean;
     discount_type: DiscountType;
     discount_value: number;
+    update_product_price?: boolean;
   }[];
   payment_mode: PaymentMode;
   amount_paid: number;
@@ -233,3 +249,4 @@ export const settingsApi = {
     return res.data;
   },
 };
+

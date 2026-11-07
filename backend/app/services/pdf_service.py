@@ -391,3 +391,43 @@ def generate_invoice_pdf(invoice: Invoice, company_setting: CompanySetting | Non
 
     doc.build(story)
     return buffer.getvalue()
+
+
+def generate_statement_pdf(statement, company=None) -> bytes:
+    from xml.sax.saxutils import escape
+    from app.services.ledger_service import IST
+    font, bold = _ensure_unicode_font()
+    styles = getSampleStyleSheet()
+    styles['Normal'].fontName = font
+    styles['Normal'].fontSize = 9
+    styles['Title'].fontName = bold
+    def para(value):
+        return Paragraph(escape(str(value or '')), styles['Normal'])
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=15*mm, leftMargin=15*mm,
+        topMargin=15*mm, bottomMargin=15*mm)
+    customer = statement['customer']
+    content = [Paragraph('Statement of Account', styles['Title']),
+        para(company.company_name if company else 'Thangamani Agencies')]
+    if company:
+        content += [para(company.address), para(f'GSTIN: {company.gstin} | Phone: {company.phone} | {company.email}')]
+    content += [Spacer(1, 5*mm), para(f'{customer.name} | {customer.shop_name or ""}'),
+        para(f'{customer.phone} | GSTIN: {customer.gstin or "-"}'), para(customer.address),
+        para(f'Period: {statement["start_date"] or "All dates"} to {statement["end_date"] or "Present"}'),
+        para(f'Opening balance: INR {statement["opening_balance"]:,.2f}'), Spacer(1, 4*mm)]
+    rows = [['Date', 'Transaction', 'Debit (INR)', 'Credit (INR)', 'Balance (INR)']]
+    for row in statement['transactions']:
+        rows.append([row['date'].astimezone(IST).strftime('%d-%m-%Y'), para(row['description']),
+            f'{row["debit"]:,.2f}', f'{row["credit"]:,.2f}', f'{row["balance"]:,.2f}'])
+    table = Table(rows, colWidths=[27*mm, 63*mm, 30*mm, 30*mm, 30*mm], repeatRows=1)
+    table.setStyle(TableStyle([('FONTNAME', (0,0), (-1,-1), font), ('FONTSIZE',(0,0),(-1,-1),8),
+        ('BACKGROUND',(0,0),(-1,0),colors.HexColor('#e2e8f0')), ('ALIGN',(2,0),(-1,-1),'RIGHT'),
+        ('VALIGN',(0,0),(-1,-1),'TOP'), ('BOTTOMPADDING',(0,0),(-1,-1),8),
+        ('LINEBELOW',(0,0),(-1,-1),0.3,colors.lightgrey)]))
+    content += [table, Spacer(1, 5*mm), para(f'Net outstanding balance: INR {statement["balance_due"]:,.2f}')]
+    def footer(canvas, document):
+        canvas.setFont(font, 8)
+        canvas.drawRightString(195*mm, 9*mm, f'Page {document.page}')
+    doc.build(content, onFirstPage=footer, onLaterPages=footer)
+    return buffer.getvalue()
+

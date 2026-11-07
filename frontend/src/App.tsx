@@ -1,3 +1,4 @@
+import { VendorKhata } from './pages/VendorKhata';
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
@@ -48,7 +49,7 @@ export const App: React.FC = () => {
                   <ProtectedRoute allowedRoles={['admin', 'billing_staff']} />
                 }
               >
-                <Route path="/billing" element={<Billing />} />
+                <Route path="/billing" element={<Billing />} /><Route path="/vendor-khata" element={<VendorKhata />} />
               </Route>
 
               <Route
@@ -75,3 +76,4 @@ export const App: React.FC = () => {
 };
 
 export default App;
+

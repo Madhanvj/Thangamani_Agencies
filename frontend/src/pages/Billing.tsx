@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { productsApi, customersApi, invoicesApi, settingsApi } from '../api';
-import type { Product, PaymentMode, DiscountType } from '../types';
+import type { Product, PaymentMode, DiscountType, Customer } from '../types';
 import { formatCurrency, isValidPhone, isValidGSTIN } from '../utils/formatters';
 import {
   Search,
@@ -12,6 +12,7 @@ import {
   CreditCard,
   Building2,
   ArrowRight,
+  Edit3,
 } from 'lucide-react';
 
 interface BillingLineItem {
@@ -19,6 +20,8 @@ interface BillingLineItem {
   product: Product;
   quantity: number;
   unit_price: number;
+  raw_unit_price?: string;
+  raw_total_price?: string;
   price_includes_gst: boolean;
   discount_type: DiscountType;
   discount_value: number;
@@ -29,6 +32,7 @@ interface BillingLineItem {
   sgst_amount: number;
   igst_amount: number;
   line_total: number;
+  update_product_price: boolean;
   stock_error?: string;
 }
 
@@ -47,6 +51,11 @@ export const Billing: React.FC = () => {
   const [customerState, setCustomerState] = useState('Tamil Nadu');
   const [customerGstin, setCustomerGstin] = useState('');
   const [existingCustomerFound, setExistingCustomerFound] = useState(false);
+
+  const [customerType, setCustomerType] = useState<'RETAIL' | 'VENDOR'>('RETAIL');
+  const [vendorOptions, setVendorOptions] = useState<Customer[]>([]);
+  const [vendorSearch, setVendorSearch] = useState('');
+  const [outstanding, setOutstanding] = useState<number | string>(0);
 
   // Line items
   const [items, setItems] = useState<BillingLineItem[]>([]);
@@ -68,6 +77,17 @@ export const Billing: React.FC = () => {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (customerType !== 'VENDOR') return;
+    let active = true;
+    const timer = setTimeout(() => {
+      customersApi.getCustomers({ customer_type: 'VENDOR', search: vendorSearch, limit: 100 })
+        .then(res => { if (active) setVendorOptions(res.items); })
+        .catch(() => { if (active) setFormError('Unable to load vendors. Please try again.'); });
+    }, 250);
+    return () => { active = false; clearTimeout(timer); };
+  }, [customerType, vendorSearch]);
+
   // Fetch company setting to know intra-state vs inter-state
   useEffect(() => {
     const fetchCompanySettings = async () => {
@@ -85,12 +105,17 @@ export const Billing: React.FC = () => {
 
   // Phone auto-suggest: when phone length reaches 10 digits
   useEffect(() => {
+    let active = true;
+    setCustomerId(undefined); setOutstanding(0);
     const checkCustomerPhone = async () => {
       const cleanPhone = customerPhone.replace(/\D/g, '');
       if (cleanPhone.length === 10) {
         try {
           const cust = await customersApi.getCustomerByPhone(cleanPhone);
+          if (!active) return;
           if (cust) {
+            setCustomerType(cust.customer_type || 'RETAIL');
+            setOutstanding(cust.balance_due ?? 0);
             setCustomerId(cust.id);
             setCustomerName(cust.name);
             setCustomerEmail(cust.email || '');
@@ -99,6 +124,7 @@ export const Billing: React.FC = () => {
             setCustomerGstin(cust.gstin || '');
             setExistingCustomerFound(true);
           } else {
+            setOutstanding(0);
             setCustomerId(undefined);
             setExistingCustomerFound(false);
           }
@@ -111,7 +137,7 @@ export const Billing: React.FC = () => {
     };
 
     const timer = setTimeout(checkCustomerPhone, 300);
-    return () => clearTimeout(timer);
+    return () => { active = false; clearTimeout(timer); };
   }, [customerPhone]);
 
   // Product live search
@@ -168,9 +194,12 @@ export const Billing: React.FC = () => {
     qty: number,
     price: number,
     discType: DiscountType,
-    discVal: number
+    discVal: number,
+    priceIncludesGst?: boolean,
+    updateProductPrice?: boolean
   ): BillingLineItem => {
-    const isInclusive = item.price_includes_gst;
+    const isInclusive = priceIncludesGst !== undefined ? priceIncludesGst : item.price_includes_gst;
+    const shouldUpdateDb = updateProductPrice !== undefined ? updateProductPrice : (item.update_product_price ?? true);
     const rawSubtotal = Math.round(price * qty * 100) / 100;
     let discAmt = 0;
     if (discType === 'percentage') {
@@ -226,6 +255,7 @@ export const Billing: React.FC = () => {
       sgst_amount: sgst,
       igst_amount: igst,
       line_total: lineTotal,
+      update_product_price: shouldUpdateDb,
       stock_error: stockErr,
     };
   };
@@ -263,6 +293,7 @@ export const Billing: React.FC = () => {
         sgst_amount: 0,
         igst_amount: 0,
         line_total: 0,
+        update_product_price: true,
       };
       const calculated = recalculateLine(newLine, 1, newLine.unit_price, 'percentage', 0);
       setItems((prev) => [...prev, calculated]);
@@ -282,7 +313,11 @@ export const Billing: React.FC = () => {
     setItems((prev) =>
       prev.map((it) => {
         if (it.id === id) {
-          return recalculateLine(it, qty, it.unit_price, it.discount_type, it.discount_value);
+          const updated = recalculateLine(it, qty, it.unit_price, it.discount_type, it.discount_value);
+          return {
+            ...updated,
+            raw_total_price: undefined,
+          };
         }
         return it;
       })
@@ -290,11 +325,77 @@ export const Billing: React.FC = () => {
   };
 
   const updateItemPrice = (id: string, priceStr: string) => {
-    const price = parseFloat(priceStr) || 0;
     setItems((prev) =>
       prev.map((it) => {
         if (it.id === id) {
-          return recalculateLine(it, it.quantity, price, it.discount_type, it.discount_value);
+          const price = parseFloat(priceStr);
+          const validPrice = isNaN(price) || price < 0 ? 0 : price;
+          const updated = recalculateLine(it, it.quantity, validPrice, it.discount_type, it.discount_value);
+          return {
+            ...updated,
+            raw_unit_price: priceStr,
+            raw_total_price: undefined,
+          };
+        }
+        return it;
+      })
+    );
+  };
+
+  const updateItemTotalPrice = (id: string, totalStr: string) => {
+    setItems((prev) =>
+      prev.map((it) => {
+        if (it.id === id) {
+          const totalVal = parseFloat(totalStr);
+          const validTotal = isNaN(totalVal) || totalVal < 0 ? 0 : totalVal;
+          const qty = it.quantity > 0 ? it.quantity : 1;
+          let calculatedPrice = 0;
+          if (it.price_includes_gst) {
+            calculatedPrice = Math.round(((validTotal + it.discount_amount) / qty) * 100) / 100;
+          } else {
+            const divisor = 1 + it.gst_rate / 100;
+            const taxable = validTotal / divisor;
+            calculatedPrice = Math.round(((taxable + it.discount_amount) / qty) * 100) / 100;
+          }
+          const updated = recalculateLine(it, it.quantity, calculatedPrice, it.discount_type, it.discount_value);
+          return {
+            ...updated,
+            raw_total_price: totalStr,
+            raw_unit_price: undefined,
+          };
+        }
+        return it;
+      })
+    );
+  };
+
+  const togglePriceIncludesGst = (id: string) => {
+    setItems((prev) =>
+      prev.map((it) => {
+        if (it.id === id) {
+          const updated = recalculateLine(
+            it,
+            it.quantity,
+            it.unit_price,
+            it.discount_type,
+            it.discount_value,
+            !it.price_includes_gst
+          );
+          return {
+            ...updated,
+            raw_total_price: undefined,
+          };
+        }
+        return it;
+      })
+    );
+  };
+
+  const toggleUpdateProductPrice = (id: string) => {
+    setItems((prev) =>
+      prev.map((it) => {
+        if (it.id === id) {
+          return { ...it, update_product_price: !it.update_product_price };
         }
         return it;
       })
@@ -306,7 +407,11 @@ export const Billing: React.FC = () => {
     setItems((prev) =>
       prev.map((it) => {
         if (it.id === id) {
-          return recalculateLine(it, it.quantity, it.unit_price, type, val);
+          const updated = recalculateLine(it, it.quantity, it.unit_price, type, val);
+          return {
+            ...updated,
+            raw_total_price: undefined,
+          };
         }
         return it;
       })
@@ -377,6 +482,7 @@ export const Billing: React.FC = () => {
     try {
       const payload = {
         customer: {
+          customer_type: customerType,
           id: customerId,
           name: customerName.trim(),
           phone: customerPhone.trim(),
@@ -392,6 +498,7 @@ export const Billing: React.FC = () => {
           price_includes_gst: it.price_includes_gst,
           discount_type: it.discount_type,
           discount_value: it.discount_value,
+          update_product_price: it.update_product_price,
         })),
         payment_mode: paymentMode,
         amount_paid: amountPaid,
@@ -461,6 +568,27 @@ export const Billing: React.FC = () => {
                 )}
               </div>
 
+              <div className="form-group">
+                <label className="form-label" htmlFor="customer-type">Customer Type</label>
+                <select id="customer-type" className="form-control" value={customerType} onChange={e => {
+                  const type = e.target.value as 'RETAIL' | 'VENDOR';
+                  setCustomerType(type); setCustomerId(undefined); setCustomerPhone(''); setCustomerName('');
+                  setCustomerAddress(''); setCustomerEmail(''); setCustomerGstin(''); setOutstanding(0);
+                  setExistingCustomerFound(false); setPaymentMode(type === 'VENDOR' ? 'Credit' : 'Cash'); setAmountPaid(0);
+                }}><option value="RETAIL">Retail</option><option value="VENDOR">Vendor</option></select>
+              </div>
+              {customerType === 'VENDOR' && <div className="form-group">
+                <label className="form-label" htmlFor="billing-vendor-search">Search Vendors</label>
+                <input id="billing-vendor-search" className="form-control" value={vendorSearch} onChange={e => setVendorSearch(e.target.value)} placeholder="Vendor name, shop or phone" />
+                <select aria-label="Select vendor" className="form-control" value={customerId || ''} onChange={e => {
+                  const v = vendorOptions.find(v => v.id === Number(e.target.value));
+                  if (!v) return;
+                  setCustomerId(v.id); setCustomerName(v.name); setCustomerPhone(v.phone); setCustomerEmail(v.email || '');
+                  setCustomerAddress(v.address || ''); setCustomerState(v.state); setCustomerGstin(v.gstin || '');
+                  setOutstanding(v.balance_due ?? 0); setPaymentMode('Credit'); setAmountPaid(0); setExistingCustomerFound(true);
+                }}><option value="">Choose a vendor or enter details below</option>{vendorOptions.map(v => <option key={v.id} value={v.id}>{v.name} {v.shop_name ? `- ${v.shop_name}` : ''} ({v.phone})</option>)}</select>
+                <p>Current Outstanding: <strong>{formatCurrency(outstanding)}</strong></p>
+              </div>}
               <div className="form-row">
                 <div className="form-col form-group">
                   <label className="form-label">Phone Number * (10 Digits)</label>
@@ -629,14 +757,22 @@ export const Billing: React.FC = () => {
                     <thead>
                       <tr>
                         <th>Product Details</th>
-                        <th style={{ width: '64px', textAlign: 'center' }}>Qty</th>
-                        <th style={{ width: '92px', textAlign: 'right' }}>MRP / Rate (₹)</th>
-                        <th style={{ width: '98px', textAlign: 'right' }}>Discount</th>
-                        <th className="text-right" style={{ width: '88px' }}>Taxable</th>
-                        <th className="text-right" style={{ width: '84px' }}>
-                          {isInterstate ? 'IGST' : 'CGST+SGST'}
+                        <th style={{ width: '60px', textAlign: 'center' }}>Qty</th>
+                        <th style={{ width: '125px', textAlign: 'right' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            Rate / Unit (₹) <Edit3 size={12} color="var(--primary)" />
+                          </span>
                         </th>
-                        <th className="text-right" style={{ width: '92px' }}>Total</th>
+                        <th style={{ width: '100px', textAlign: 'right' }}>Discount</th>
+                        <th className="text-right" style={{ width: '90px' }}>Taxable</th>
+                        <th className="text-right" style={{ width: '130px' }}>
+                          {isInterstate ? 'IGST' : 'CGST + SGST'}
+                        </th>
+                        <th className="text-right" style={{ width: '125px' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            Total (₹) <Edit3 size={12} color="var(--primary)" />
+                          </span>
+                        </th>
                         <th style={{ width: '30px' }}></th>
                       </tr>
                     </thead>
@@ -650,34 +786,51 @@ export const Billing: React.FC = () => {
                             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                               SKU: {it.product.sku} • HSN: {it.product.hsn_code} • GST: {it.gst_rate}%
                             </div>
-                            <div style={{ marginTop: '2px' }}>
-                              {it.price_includes_gst ? (
-                                <span
-                                  style={{
-                                    display: 'inline-block',
-                                    fontSize: '0.66rem',
-                                    padding: '1px 5px',
-                                    borderRadius: '3px',
-                                    backgroundColor: '#ecfdf5',
-                                    color: '#065f46',
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  Price incl. GST
-                                </span>
-                              ) : (
-                                <span
-                                  style={{
-                                    display: 'inline-block',
-                                    fontSize: '0.66rem',
-                                    padding: '1px 5px',
-                                    borderRadius: '3px',
-                                    backgroundColor: '#eff6ff',
-                                    color: '#1e40af',
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  Price excl. GST
+                            <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <button
+                                type="button"
+                                onClick={() => togglePriceIncludesGst(it.id)}
+                                title="Click to toggle between inclusive/exclusive tax pricing"
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  fontSize: '0.66rem',
+                                  padding: '1px 6px',
+                                  borderRadius: '3px',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  backgroundColor: it.price_includes_gst ? '#ecfdf5' : '#eff6ff',
+                                  color: it.price_includes_gst ? '#065f46' : '#1e40af',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {it.price_includes_gst ? '✓ Incl. GST' : '+ Excl. GST'}
+                              </button>
+
+                              <label
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px',
+                                  fontSize: '0.68rem',
+                                  cursor: 'pointer',
+                                  color: it.unit_price !== Number(it.product.unit_price) ? '#d97706' : 'var(--text-muted)',
+                                  fontWeight: it.unit_price !== Number(it.product.unit_price) ? 600 : 400,
+                                }}
+                                title="Save this new price to the product catalog in the database"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={it.update_product_price}
+                                  onChange={() => toggleUpdateProductPrice(it.id)}
+                                  style={{ cursor: 'pointer', width: '12px', height: '12px' }}
+                                />
+                                <span>Update DB price</span>
+                              </label>
+
+                              {it.unit_price !== Number(it.product.unit_price) && (
+                                <span style={{ fontSize: '0.65rem', color: '#92400e', backgroundColor: '#fef3c7', padding: '1px 4px', borderRadius: '3px' }}>
+                                  DB was ₹{Number(it.product.unit_price).toLocaleString('en-IN')}
                                 </span>
                               )}
                             </div>
@@ -707,9 +860,17 @@ export const Billing: React.FC = () => {
                               step="0.01"
                               min={0}
                               className="form-control billing-input-compact"
-                              style={{ width: '86px', textAlign: 'right', marginLeft: 'auto' }}
-                              value={it.unit_price}
+                              style={{
+                                width: '100px',
+                                textAlign: 'right',
+                                marginLeft: 'auto',
+                                fontWeight: 600,
+                                borderColor: it.unit_price !== Number(it.product.unit_price) ? '#f59e0b' : undefined,
+                                backgroundColor: it.unit_price !== Number(it.product.unit_price) ? '#fffbeb' : undefined,
+                              }}
+                              value={it.raw_unit_price !== undefined ? it.raw_unit_price : it.unit_price}
                               onChange={(e) => updateItemPrice(it.id, e.target.value)}
+                              title="Edit unit price (auto-calculates CGST/SGST and line total)"
                             />
                           </td>
                           <td>
@@ -760,15 +921,35 @@ export const Billing: React.FC = () => {
                               </div>
                             ) : (
                               <div>
-                                <div style={{ fontWeight: 600 }}>{formatCurrency(it.cgst_amount + it.sgst_amount)}</div>
-                                <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>
-                                  {it.gst_rate / 2}% + {it.gst_rate / 2}%
+                                <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>
+                                  {formatCurrency(it.cgst_amount + it.sgst_amount)}
+                                </div>
+                                <div style={{ fontSize: '0.66rem', color: '#0369a1', lineHeight: 1.25 }}>
+                                  CGST ({it.gst_rate / 2}%): {formatCurrency(it.cgst_amount)}
+                                </div>
+                                <div style={{ fontSize: '0.66rem', color: '#0284c7', lineHeight: 1.25 }}>
+                                  SGST ({it.gst_rate / 2}%): {formatCurrency(it.sgst_amount)}
                                 </div>
                               </div>
                             )}
                           </td>
-                          <td className="text-right" style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
-                            {formatCurrency(it.line_total)}
+                          <td className="text-right" style={{ whiteSpace: 'nowrap' }}>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min={0}
+                              className="form-control billing-input-compact"
+                              style={{
+                                width: '105px',
+                                textAlign: 'right',
+                                marginLeft: 'auto',
+                                fontWeight: 700,
+                                color: 'var(--primary)',
+                              }}
+                              value={it.raw_total_price !== undefined ? it.raw_total_price : it.line_total}
+                              onChange={(e) => updateItemTotalPrice(it.id, e.target.value)}
+                              title="Edit total price directly (auto-calculates rate, CGST & SGST)"
+                            />
                           </td>
                           <td className="text-center" style={{ padding: '4px' }}>
                             <button
@@ -975,3 +1156,5 @@ export const Billing: React.FC = () => {
     </div>
   );
 };
+
+

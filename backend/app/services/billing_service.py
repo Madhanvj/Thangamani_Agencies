@@ -125,6 +125,7 @@ def create_invoice(db: Session, invoice_in: InvoiceCreate, user_id: int | None =
 
         if not customer:
             customer = Customer(
+                customer_type=cust_data.customer_type,
                 name=cust_data.name.strip(),
                 phone=cust_data.phone.strip(),
                 email=cust_data.email.strip() if cust_data.email else None,
@@ -173,7 +174,17 @@ def create_invoice(db: Session, invoice_in: InvoiceCreate, user_id: int | None =
                     f"Requested: {item_in.quantity}, Available: {product.current_stock}."
                 )
 
-            unit_price = item_in.unit_price if item_in.unit_price is not None else product.unit_price
+            if item_in.unit_price is not None:
+                unit_price = item_in.unit_price
+                # Update product master price in database when edited
+                if getattr(item_in, 'update_product_price', True):
+                    product.unit_price = unit_price
+                    if item_in.price_includes_gst is not None:
+                        product.price_includes_gst = item_in.price_includes_gst
+                    product.updated_at = datetime.now(timezone.utc)
+            else:
+                unit_price = product.unit_price
+
             gst_rate = product.gst_rate
             price_includes_gst = item_in.price_includes_gst if item_in.price_includes_gst is not None else getattr(product, 'price_includes_gst', True)
 
@@ -261,7 +272,7 @@ def create_invoice(db: Session, invoice_in: InvoiceCreate, user_id: int | None =
             round_off=totals["round_off"],
             grand_total=grand_total,
             grand_total_words=totals["grand_total_words"],
-            amount_paid=amount_paid,
+            amount_paid=actual_payment_amt,
             balance_due=balance_due,
             notes=invoice_in.notes,
             created_by=user_id,
@@ -372,3 +383,4 @@ def add_payment(db: Session, payment_in: PaymentCreate, user_id: int | None = No
     except Exception:
         db.rollback()
         raise
+

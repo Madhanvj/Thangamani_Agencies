@@ -821,3 +821,8 @@ body {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
+
+.khata-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 20px 0; }
+.khata-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.khata-error { color: #b91c1c; padding: 12px; background: #fee2e2; border-radius: 8px; }
+@media (max-width: 700px) { .khata-kpis { grid-template-columns: 1fr; } }

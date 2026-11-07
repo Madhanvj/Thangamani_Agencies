@@ -34,6 +34,7 @@ wheels/
 
 # Testing & Cache
 .pytest_cache/
+.uv-cache/
 .coverage
 htmlcov/
 
@@ -57,3 +58,7 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+
+cloudflared.exe
+

@@ -87,6 +87,12 @@ export interface InventoryReport {
 }
 
 export interface Customer {
+  customer_type?: 'RETAIL' | 'VENDOR';
+  shop_name?: string | null;
+  credit_limit?: number | string | null;
+  total_billed?: number | string;
+  total_paid?: number | string;
+  balance_due?: number | string;
   id: number;
   name: string;
   phone: string;
@@ -249,3 +255,11 @@ export interface CompanySetting {
   created_at: string;
   updated_at: string;
 }
+
+export interface LedgerStatement {
+  customer: Customer;
+  opening_balance: number | string;
+  balance_due: number | string;
+  transactions: { date: string; type: 'INVOICE' | 'PAYMENT'; id: number; description: string; reference_number?: string; notes?: string; debit: number | string; credit: number | string; balance: number | string }[];
+}
+export interface KhataSummary { total_vendors: number; total_receivables: number | string; collected_this_month: number | string }

@@ -15,55 +15,58 @@ def seed():
     db = SessionLocal()
     try:
         print("Checking existing data...")
-        # Check if already seeded
-        if db.query(User).first():
-            print("Database already has data. Skipping seed.")
+        if db.query(Category).first():
+            print("Database already has categories/products. Skipping seed.")
             return
 
-        print("Seeding Company Settings...")
-        company_setting = CompanySetting(
-            company_name="Thangamani Agencies",
-            gstin="33ABCDE1234F1Z5",
-            phone="+91 98765 43210",
-            email="contact@thangamaniagencies.com",
-            address="124, Netaji Road, Pollachi, Coimbatore District, Tamil Nadu - 642001",
-            state="Tamil Nadu",
-            terms_and_conditions=(
-                "1. Goods once sold will not be taken back without valid reason.\n"
-                "2. Standard manufacturer warranty applies.\n"
-                "3. Invoices must be presented for warranty claims.\n"
-                "4. All disputes are subject to Pollachi / Coimbatore jurisdiction."
+        # Ensure company setting exists
+        company_setting = db.query(CompanySetting).first()
+        if not company_setting:
+            company_setting = CompanySetting(
+                company_name="Thangamani Agencies",
+                gstin="33ABCDE1234F1Z5",
+                phone="+91 9500656805",
+                email="madhansankar02@gmail.com",
+                address="15, Arumuga Achari St, Dharmapuri, Tamil Nadu 636701",
+                state="Tamil Nadu",
+                terms_and_conditions=(
+                    "1. Goods once sold will not be taken back without valid reason.\n"
+                    "2. Standard manufacturer warranty applies.\n"
+                    "3. Invoices must be presented for warranty claims.\n"
+                    "4. All disputes are subject to Dharmapuri jurisdiction."
+                )
             )
-        )
-        db.add(company_setting)
+            db.add(company_setting)
 
-        print("Seeding Users...")
-        admin_user = User(
-            username="admin",
-            email="admin@thangamaniagencies.com",
-            full_name="Thangamani Ramanathan (Admin)",
-            hashed_password=get_password_hash("admin123"),
-            role=UserRole.ADMIN,
-            is_active=True
-        )
-        billing_user = User(
-            username="billing",
-            email="billing@thangamaniagencies.com",
-            full_name="Karthik Rajan (Billing Staff)",
-            hashed_password=get_password_hash("billing123"),
-            role=UserRole.BILLING_STAFF,
-            is_active=True
-        )
-        inventory_user = User(
-            username="inventory",
-            email="inventory@thangamaniagencies.com",
-            full_name="Senthil Kumar (Inventory Manager)",
-            hashed_password=get_password_hash("inventory123"),
-            role=UserRole.INVENTORY_MANAGER,
-            is_active=True
-        )
-        db.add_all([admin_user, billing_user, inventory_user])
-        db.flush()
+        # Ensure users exist
+        admin_user = db.query(User).filter(User.username == "admin").first()
+        if not admin_user:
+            admin_user = User(
+                username="admin",
+                email="admin@thangamaniagencies.com",
+                full_name="Thangamani Ramanathan (Admin)",
+                hashed_password=get_password_hash("admin123"),
+                role=UserRole.ADMIN,
+                is_active=True
+            )
+            billing_user = User(
+                username="billing",
+                email="billing@thangamaniagencies.com",
+                full_name="Karthik Rajan (Billing Staff)",
+                hashed_password=get_password_hash("billing123"),
+                role=UserRole.BILLING_STAFF,
+                is_active=True
+            )
+            inventory_user = User(
+                username="inventory",
+                email="inventory@thangamaniagencies.com",
+                full_name="Senthil Kumar (Inventory Manager)",
+                hashed_password=get_password_hash("inventory123"),
+                role=UserRole.INVENTORY_MANAGER,
+                is_active=True
+            )
+            db.add_all([admin_user, billing_user, inventory_user])
+            db.flush()
 
         print("Seeding Categories...")
         categories_data = [

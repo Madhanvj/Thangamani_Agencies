@@ -68,6 +68,9 @@ export const Sidebar: React.FC = () => {
           <span>Customers</span>
         </NavLink>
 
+        {canBill && <NavLink to="/vendor-khata" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+          <Users size={18} /><span>Vendor Khata</span>
+        </NavLink>}
         {isAdmin && (
           <NavLink to="/settings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <Settings size={18} />
@@ -90,3 +93,4 @@ export const Sidebar: React.FC = () => {
     </aside>
   );
 };
+

@@ -1,10 +1,10 @@
 from decimal import Decimal
 import uuid
 import pytest
-from app.models import Product, Category, Invoice, InvoiceStatus, MovementType, StockMovement
+from app.models import Product, Category, InvoiceStatus, MovementType, StockMovement
 from app.schemas.invoice import InvoiceCreate, InvoiceItemCreate, CustomerInlineCreate
 from app.models.invoice import PaymentMode, DiscountType
-from app.services.billing_service import create_invoice, cancel_invoice, generate_invoice_number
+from app.services.billing_service import create_invoice, cancel_invoice
 
 
 def test_create_invoice_deducts_stock_and_creates_invoice_inclusive(db):
@@ -231,3 +231,59 @@ def test_cancel_invoice_restores_stock(db):
     assert restore_mov is not None
     assert restore_mov.quantity == 2
     assert "Cancelled Invoice" in restore_mov.reference
+
+
+def test_create_invoice_with_edited_price_updates_product_db_price(db):
+    uid = uuid.uuid4().hex[:6]
+    cat = Category(name=f"Price Test Cat {uid}", description="Testing")
+    db.add(cat)
+    db.flush()
+
+    prod = Product(
+        name="Price Variable TV",
+        sku=f"TEST-VAR-TV-{uid}",
+        category_id=cat.id,
+        brand="BrandVar",
+        model="ModelVar",
+        hsn_code="8528",
+        unit_price=Decimal("40000.00"),  # Initial DB price
+        gst_rate=Decimal("18.00"),
+        current_stock=5,
+        reorder_level=1,
+        price_includes_gst=True
+    )
+    db.add(prod)
+    db.flush()
+
+    # User sells at edited price 45000.00 (inclusive of GST)
+    invoice_in = InvoiceCreate(
+        customer=CustomerInlineCreate(
+            name="Senthil",
+            phone=f"98111{uid[:5]}",
+            state="Tamil Nadu"
+        ),
+        items=[
+            InvoiceItemCreate(
+                product_id=prod.id,
+                quantity=1,
+                unit_price=Decimal("45000.00"),
+                update_product_price=True
+            )
+        ],
+        payment_mode=PaymentMode.CASH,
+        amount_paid=Decimal("45000.00")
+    )
+
+    inv = create_invoice(db=db, invoice_in=invoice_in)
+
+    # 1. Verify invoice was billed at new price
+    assert inv.grand_total == Decimal("45000.00")
+    # 45000 / 1.18 = 38135.59 taxable
+    assert inv.total_taxable == Decimal("38135.59")
+    # CGST and SGST calculated from 45000
+    assert inv.total_cgst == Decimal("3432.21")
+    assert inv.total_sgst == Decimal("3432.20")
+
+    # 2. Verify product DB price was updated to 45000.00
+    db.refresh(prod)
+    assert prod.unit_price == Decimal("45000.00")

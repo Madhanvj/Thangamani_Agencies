@@ -1,3 +1,4 @@
+from typing import Literal
 from datetime import datetime
 from decimal import Decimal
 from pydantic import BaseModel, Field, ConfigDict
@@ -12,6 +13,7 @@ class InvoiceItemCreate(BaseModel):
     price_includes_gst: bool | None = None
     discount_type: DiscountType = DiscountType.PERCENTAGE
     discount_value: Decimal = Field(default=Decimal("0.00"), ge=Decimal("0.00"))
+    update_product_price: bool = Field(default=True, description="Whether to update product unit_price in DB")
 
 
 class InvoiceItemOut(BaseModel):
@@ -41,6 +43,7 @@ class InvoiceItemOut(BaseModel):
 
 
 class CustomerInlineCreate(BaseModel):
+    customer_type: Literal['RETAIL', 'VENDOR'] = 'RETAIL'
     id: int | None = None
     name: str
     phone: str
@@ -117,3 +120,4 @@ class InvoiceListOut(BaseModel):
     page: int
     limit: int
     pages: int
+

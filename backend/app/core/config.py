@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     COMPANY_GSTIN: str = "33ABCDE1234F1Z5"
     COMPANY_PHONE: str = "+91 9500656805"
     COMPANY_EMAIL: str = "madhansankar02@gmail.com"
-    COMPANY_ADDRESS: str = "15, Arumuga Achari St, Dharmapuri - 636701"
+    COMPANY_ADDRESS: str = "15, Arumuga Achari St, Dharmapuri, Tamil Nadu 636701"
 
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"),

@@ -1,3 +1,13 @@
+from datetime import date, datetime
+from typing import Literal
+from fastapi.responses import Response
+from sqlalchemy.orm import selectinload
+from sqlalchemy import func
+from app.models import Payment, UserRole, CompanySetting
+from app.api.deps import require_roles
+from app.schemas.payment import CustomerPaymentCreate, PaymentOut
+from app.services.ledger_service import customer_totals, allocate_payment, statement, IST
+from app.services.pdf_service import generate_statement_pdf
 import math
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -16,15 +26,18 @@ def list_customers(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
     search: str | None = None,
+    customer_type: Literal['RETAIL', 'VENDOR'] | None = None,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    query = db.query(Customer)
+    query = db.query(Customer).options(selectinload(Customer.invoices))
+    if customer_type:
+        query = query.filter(Customer.customer_type == customer_type)
     if search:
         s = f"%{search.strip()}%"
         query = query.filter(
             or_(
-                Customer.name.ilike(s),
+                Customer.name.ilike(s), Customer.shop_name.ilike(s),
                 Customer.phone.ilike(s),
                 Customer.email.ilike(s),
                 Customer.gstin.ilike(s)
@@ -36,14 +49,7 @@ def list_customers(
     offset = (page - 1) * limit
     db_items = query.order_by(Customer.name.asc()).offset(offset).limit(limit).all()
 
-    items = []
-    for c in db_items:
-        c_out = CustomerOut.model_validate(c)
-        c_out.total_invoices = len(c.invoices)
-        c_out.total_spent = float(sum(
-            inv.grand_total for inv in c.invoices if inv.status != InvoiceStatus.CANCELLED
-        ))
-        items.append(c_out)
+    items = [customer_totals(c) for c in db_items]
 
     return CustomerListOut(items=items, total=total, page=page, limit=limit, pages=pages)
 
@@ -58,13 +64,21 @@ def get_customer_by_phone(
     customer = db.query(Customer).filter(Customer.phone == clean_phone).first()
     if not customer:
         return None
-    c_out = CustomerOut.model_validate(customer)
-    c_out.total_invoices = len(customer.invoices)
-    c_out.total_spent = float(sum(
-        inv.grand_total for inv in customer.invoices if inv.status != InvoiceStatus.CANCELLED
-    ))
-    return c_out
+    return customer_totals(customer)
 
+
+@router.get('/khata/summary')
+def khata_summary(db: Session = Depends(get_db),
+    current_user = Depends(require_roles(UserRole.ADMIN, UserRole.BILLING_STAFF))):
+    totals = db.query(func.count(Customer.id)).filter(Customer.customer_type == 'VENDOR').scalar()
+    outstanding = db.query(func.coalesce(func.sum(Invoice.balance_due), 0)).join(Customer).filter(
+        Customer.customer_type == 'VENDOR', Invoice.status != InvoiceStatus.CANCELLED).scalar()
+    now = datetime.now(IST)
+    start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    collected = db.query(func.coalesce(func.sum(Payment.amount), 0)).join(Invoice).join(Customer).filter(
+        Customer.customer_type == 'VENDOR', Invoice.status != InvoiceStatus.CANCELLED,
+        Payment.payment_date >= start, Payment.payment_date <= now).scalar()
+    return dict(total_vendors=totals, total_receivables=outstanding, collected_this_month=collected)
 
 @router.get("/{customer_id}", response_model=CustomerOut)
 def get_customer(
@@ -76,12 +90,7 @@ def get_customer(
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
 
-    c_out = CustomerOut.model_validate(customer)
-    c_out.total_invoices = len(customer.invoices)
-    c_out.total_spent = float(sum(
-        inv.grand_total for inv in customer.invoices if inv.status != InvoiceStatus.CANCELLED
-    ))
-    return c_out
+    return customer_totals(customer)
 
 
 @router.get("/{customer_id}/invoices", response_model=list[InvoiceOut])
@@ -114,6 +123,9 @@ def create_customer(
         raise HTTPException(status_code=400, detail=f"Customer with phone '{customer_in.phone}' already exists.")
 
     customer = Customer(
+        customer_type=customer_in.customer_type,
+        shop_name=customer_in.shop_name,
+        credit_limit=customer_in.credit_limit,
         name=customer_in.name.strip(),
         phone=customer_in.phone.strip(),
         email=customer_in.email.strip() if customer_in.email else None,
@@ -124,7 +136,7 @@ def create_customer(
     db.add(customer)
     db.commit()
     db.refresh(customer)
-    return customer
+    return customer_totals(customer)
 
 
 @router.put("/{customer_id}", response_model=CustomerOut)
@@ -144,6 +156,13 @@ def update_customer(
             raise HTTPException(status_code=400, detail="Phone number is already associated with another customer.")
         customer.phone = customer_in.phone.strip()
 
+    for field in ('customer_type', 'shop_name', 'credit_limit'):
+        if field in customer_in.model_fields_set:
+            value = getattr(customer_in, field)
+            if field == 'customer_type' and value is None:
+                raise HTTPException(status_code=422, detail='Customer type cannot be null')
+            setattr(customer, field, value)
+
     if customer_in.name is not None:
         customer.name = customer_in.name.strip()
     if customer_in.email is not None:
@@ -157,4 +176,40 @@ def update_customer(
 
     db.commit()
     db.refresh(customer)
-    return customer
+    return customer_totals(customer)
+
+
+@router.post('/{customer_id}/payments', response_model=list[PaymentOut], status_code=201)
+def collect_customer_payment(customer_id: int, data: CustomerPaymentCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_roles(UserRole.ADMIN, UserRole.BILLING_STAFF))):
+    try:
+        return allocate_payment(db, customer_id, data, current_user.id)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.get('/{customer_id}/statement')
+def customer_statement(customer_id: int, start_date: date | None = None, end_date: date | None = None,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_roles(UserRole.ADMIN, UserRole.BILLING_STAFF))):
+    try:
+        return statement(db, customer_id, start_date, end_date)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.get('/{customer_id}/statement/pdf')
+def customer_statement_pdf(customer_id: int, start_date: date | None = None, end_date: date | None = None,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_roles(UserRole.ADMIN, UserRole.BILLING_STAFF))):
+    data = customer_statement(customer_id, start_date, end_date, db, current_user)
+    pdf = generate_statement_pdf(data, db.query(CompanySetting).first())
+    return Response(pdf, media_type='application/pdf', headers={
+        'Content-Disposition': f'attachment; filename="Statement_{customer_id}.pdf"'})
+
+

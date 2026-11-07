@@ -1,9 +1,8 @@
 from decimal import Decimal
 import random
-import pytest
 from app.models.invoice import DiscountType
 from app.services.gst_calculator import (
-    calculate_line_item, calculate_invoice_totals, convert_amount_to_words, quantize_2dec
+    calculate_line_item, calculate_invoice_totals
 )
 
 

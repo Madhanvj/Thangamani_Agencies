@@ -1,6 +1,6 @@
 from decimal import Decimal
 import pytest
-from app.models import Product, Category, MovementType, StockMovement
+from app.models import Product, Category, MovementType
 from app.services.inventory_service import adjust_stock
 
 
