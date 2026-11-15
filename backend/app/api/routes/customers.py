@@ -30,7 +30,7 @@ def list_customers(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    query = db.query(Customer).options(selectinload(Customer.invoices))
+    query = db.query(Customer).options(selectinload(Customer.invoices), selectinload(Customer.opening_payments))
     if customer_type:
         query = query.filter(Customer.customer_type == customer_type)
     if search:
@@ -73,12 +73,18 @@ def khata_summary(db: Session = Depends(get_db),
     totals = db.query(func.count(Customer.id)).filter(Customer.customer_type == 'VENDOR').scalar()
     outstanding = db.query(func.coalesce(func.sum(Invoice.balance_due), 0)).join(Customer).filter(
         Customer.customer_type == 'VENDOR', Invoice.status != InvoiceStatus.CANCELLED).scalar()
+    opening = db.query(func.coalesce(func.sum(Customer.opening_balance), 0)).filter(Customer.customer_type == 'VENDOR').scalar()
+    opening_paid = db.query(func.coalesce(func.sum(Payment.amount), 0)).join(Customer, Payment.customer_id == Customer.id).filter(
+        Customer.customer_type == 'VENDOR').scalar()
     now = datetime.now(IST)
     start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     collected = db.query(func.coalesce(func.sum(Payment.amount), 0)).join(Invoice).join(Customer).filter(
         Customer.customer_type == 'VENDOR', Invoice.status != InvoiceStatus.CANCELLED,
         Payment.payment_date >= start, Payment.payment_date <= now).scalar()
-    return dict(total_vendors=totals, total_receivables=outstanding, collected_this_month=collected)
+    opening_collected = db.query(func.coalesce(func.sum(Payment.amount), 0)).join(Customer, Payment.customer_id == Customer.id).filter(
+        Customer.customer_type == 'VENDOR', Payment.payment_date >= start, Payment.payment_date <= now).scalar()
+    return dict(total_vendors=totals, total_receivables=outstanding + opening - opening_paid,
+        collected_this_month=collected + opening_collected)
 
 @router.get("/{customer_id}", response_model=CustomerOut)
 def get_customer(
@@ -118,6 +124,8 @@ def create_customer(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
+    if customer_in.opening_balance and customer_in.customer_type != 'VENDOR':
+        raise HTTPException(status_code=422, detail='Opening balance is only available for vendors.')
     existing = db.query(Customer).filter(Customer.phone == customer_in.phone.strip()).first()
     if existing:
         raise HTTPException(status_code=400, detail=f"Customer with phone '{customer_in.phone}' already exists.")
@@ -126,6 +134,7 @@ def create_customer(
         customer_type=customer_in.customer_type,
         shop_name=customer_in.shop_name,
         credit_limit=customer_in.credit_limit,
+        opening_balance=customer_in.opening_balance,
         name=customer_in.name.strip(),
         phone=customer_in.phone.strip(),
         email=customer_in.email.strip() if customer_in.email else None,

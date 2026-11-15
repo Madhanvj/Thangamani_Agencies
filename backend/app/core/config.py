@@ -1,8 +1,11 @@
-import os
+from pathlib import Path
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    FRONTEND_PORT: int = Field(default=5173, ge=1, le=65535)
+    BACKEND_PORT: int = Field(default=8001, ge=1, le=65535)
     DATABASE_URL: str = "postgresql://postgres:1234@localhost:5432/thangamani_agencies"
     SECRET_KEY: str = "thangamani-secret-key-change-in-production-2026-super-secure"
     ALGORITHM: str = "HS256"
@@ -16,7 +19,8 @@ class Settings(BaseSettings):
     COMPANY_ADDRESS: str = "15, Arumuga Achari St, Dharmapuri, Tamil Nadu 636701"
 
     model_config = SettingsConfigDict(
-        env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"),
+        env_file=(Path(__file__).resolve().parents[3] / '.env',
+                  Path(__file__).resolve().parents[2] / '.env'),
         extra="ignore"
     )
 

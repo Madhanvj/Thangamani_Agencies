@@ -132,9 +132,9 @@ CREATE DATABASE thangamani_agencies;
 
 7. Start the FastAPI development server:
    ```bash
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   python run.py
    ```
-   Interactive OpenAPI documentation is available at: `http://localhost:8000/docs`
+   Interactive OpenAPI documentation is available at `http://localhost:<BACKEND_PORT>/docs` (default: `8001`).
 
 ---
 
@@ -153,14 +153,27 @@ CREATE DATABASE thangamani_agencies;
 3. Configure environment variables:
    Verify `frontend/.env` contains:
    ```ini
-   VITE_API_URL=http://localhost:8000/api
+   VITE_API_URL=/api
    ```
 
 4. Start Vite development server:
    ```bash
    npm run dev
    ```
-   The application will be live at: `http://localhost:5173/`
+   The application will be live at `http://localhost:<FRONTEND_PORT>/` (default: `5173`).
+
+### Configure frontend and backend ports
+
+Copy the project-root `.env.example` to `.env`, then set both ports there:
+
+```ini
+FRONTEND_PORT=5173
+BACKEND_PORT=8001
+```
+
+Start the backend with `python backend/run.py` from the project root (or `python run.py` inside `backend`). Start the frontend with `npm run dev` inside `frontend`. Both read the shared port settings; the frontend API proxy and backend CORS origins follow them automatically. Restart both servers after changing ports. Vite reports an error if the configured port is occupied.
+
+Keep database credentials and backend settings in `backend/.env`, and `VITE_API_URL=/api` in `frontend/.env`. Avoid defining the shared ports again in `backend/.env`; backend-specific settings there take precedence over the root file. Shell environment variables override file values.
 
 ---
 

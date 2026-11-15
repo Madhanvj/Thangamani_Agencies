@@ -17,7 +17,7 @@ class CustomerBase(BaseModel):
 
 
 class CustomerCreate(CustomerBase):
-    pass
+    opening_balance: Decimal = Field(default=Decimal('0.00'), ge=0, max_digits=12, decimal_places=2)
 
 
 class CustomerUpdate(BaseModel):
@@ -33,6 +33,7 @@ class CustomerUpdate(BaseModel):
 
 
 class CustomerOut(CustomerBase):
+    opening_balance: Decimal = Decimal('0.00')
     id: int
     created_at: datetime
     updated_at: datetime

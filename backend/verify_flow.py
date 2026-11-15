@@ -1,6 +1,7 @@
 import httpx
+from app.core.config import settings
 
-BASE_URL = "http://localhost:8000/api"
+BASE_URL = f"http://localhost:{settings.BACKEND_PORT}/api"
 
 def run_verification():
     print("=" * 60)

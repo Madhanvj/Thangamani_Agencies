@@ -14,7 +14,8 @@ class PaymentCreate(BaseModel):
 
 class PaymentOut(BaseModel):
     id: int
-    invoice_id: int
+    invoice_id: int | None
+    customer_id: int | None = None
     payment_date: datetime
     amount: Decimal
     payment_mode: str

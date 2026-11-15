@@ -37,6 +37,7 @@ wheels/
 .uv-cache/
 .coverage
 htmlcov/
+*.log
 
 # Node & Frontend
 node_modules/

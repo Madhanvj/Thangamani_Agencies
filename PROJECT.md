@@ -46,8 +46,8 @@ The system solves two primary retail challenges:
 ```mermaid
 flowchart TD
     Client["Client Browser / POS Device"]
-    ViteServer["Vite Frontend Server (Port 5173)"]
-    FastAPIApp["FastAPI Backend (Port 8000)"]
+    ViteServer["Vite Frontend Server (FRONTEND_PORT from .env)"]
+    FastAPIApp["FastAPI Backend (BACKEND_PORT from .env)"]
     PostgresDB[("PostgreSQL Database")]
     PDFEngine["ReportLab PDF Generator"]
 
@@ -336,7 +336,7 @@ Thangamani Agencies/
 │   ├── .env                        # Local frontend environment variables (git-ignored)
 │   ├── .env.example                # Example frontend env template
 │   ├── package.json                # React 19, TypeScript, Vite dependencies
-│   ├── vite.config.ts              # Vite proxy configuration (/api -> backend:8000)
+│   ├── vite.config.ts              # Vite proxy configuration (/api -> BACKEND_PORT from root .env)
 │   ├── index.html                  # HTML entrypoint
 │   └── src/
 │       ├── App.tsx                 # Router definition and route guards
@@ -382,11 +382,11 @@ Thangamani Agencies/
 
 ### 9.2 Running the Application
 
-- **Backend (Port 8000)**:
+- **Backend (BACKEND_PORT in root .env; default 8001)**:
   ```powershell
-  .\.venv\Scripts\uvicorn.exe app.main:app --app-dir backend --reload --port 8000
+  .\.venv\Scripts\python.exe backend/run.py
   ```
-- **Frontend (Port 5173)**:
+- **Frontend (FRONTEND_PORT in root .env; default 5173)**:
   ```powershell
   cd frontend
   npm run dev
@@ -413,7 +413,7 @@ npm --prefix frontend run build
 
 ### 9.4 Remote Sharing / Tunneling
 
-Because the frontend is configured with a reverse proxy in `vite.config.ts`, only port `5173` needs to be forwarded for external users to access both frontend and backend seamlessly:
+Because the frontend is configured with a reverse proxy in `vite.config.ts`, only the configured `FRONTEND_PORT` (default `5173`) needs to be forwarded for external users to access both frontend and backend seamlessly:
 
 ```powershell
 # Quick Cloudflare tunnel (no sign-up required):

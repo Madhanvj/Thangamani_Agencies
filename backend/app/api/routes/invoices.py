@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.core.db import get_db
 from app.models import Invoice, InvoiceStatus, UserRole, CompanySetting
+from app.models.stock_movement import StockMovement, MovementType
 from app.schemas.invoice import (
     InvoiceCreate, InvoiceOut, InvoiceListOut, InvoicePreviewRequest, InvoicePreviewOut
 )
@@ -130,3 +131,45 @@ def cancel_existing_invoice(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to cancel invoice: {str(e)}")
+
+
+@router.delete("/{invoice_id}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
+def delete_invoice(
+    invoice_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_roles(UserRole.ADMIN))
+) -> Response:
+    """
+    Permanently delete an invoice (Admin only).
+    - Restores stock for non-cancelled invoices.
+    - Payments and items are removed via ORM cascade (cascade='all, delete-orphan').
+    """
+    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).with_for_update().first()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    try:
+        # Restore stock if invoice was not already cancelled
+        if invoice.status != InvoiceStatus.CANCELLED:
+            for item in invoice.items:
+                product = item.product
+                if product:
+                    product.current_stock += item.quantity
+                    movement = StockMovement(
+                        product_id=product.id,
+                        type=MovementType.IN,
+                        quantity=item.quantity,
+                        reference=f"Deleted Invoice {invoice.invoice_number}",
+                        created_by=current_user.id,
+                    )
+                    db.add(movement)
+
+        # ORM cascade="all, delete-orphan" on Invoice.items and Invoice.payments
+        # handles deleting InvoiceItems and Payments automatically.
+        db.delete(invoice)
+        db.commit()
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete invoice: {str(e)}")

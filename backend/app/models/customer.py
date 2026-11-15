@@ -7,11 +7,15 @@ from app.core.db import Base
 
 class Customer(Base):
     __tablename__ = "customers"
-    __table_args__ = (CheckConstraint("customer_type IN ('RETAIL', 'VENDOR')", name="ck_customer_type"),)
+    __table_args__ = (
+        CheckConstraint("customer_type IN ('RETAIL', 'VENDOR')", name="ck_customer_type"),
+        CheckConstraint("opening_balance >= 0", name="ck_customer_opening_balance"),
+    )
 
     customer_type: Mapped[str] = mapped_column(String(10), default="RETAIL", server_default="RETAIL", nullable=False, index=True)
     shop_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
     credit_limit: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    opening_balance: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal('0.00'), server_default='0', nullable=False)
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(150), index=True, nullable=False)
@@ -25,3 +29,4 @@ class Customer(Base):
 
     # Relationships
     invoices = relationship("Invoice", back_populates="customer")
+    opening_payments = relationship("Payment", back_populates="opening_customer")

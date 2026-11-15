@@ -109,6 +109,56 @@ def test_invalid_payment_amount(amount):
         CustomerPaymentCreate(amount=Decimal(amount))
 
 
+def test_opening_balance_collections_and_statement(ledger_db):
+    db = ledger_db
+    customer = setup(db)
+    customer.opening_balance = Decimal('250.50')
+    customer.created_at = datetime.now(timezone.utc) - timedelta(days=10)
+    db.commit()
+    assert customer_totals(customer).balance_due == Decimal('250.50')
+    payments = allocate_payment(db, customer.id, CustomerPaymentCreate(amount=Decimal('100.25')))
+    assert len(payments) == 1
+    assert payments[0].invoice_id is None and payments[0].customer_id == customer.id
+    totals = customer_totals(customer)
+    assert (totals.total_billed, totals.total_paid, totals.balance_due) == (Decimal('250.50'), Decimal('100.25'), Decimal('150.25'))
+    full = statement(db, customer.id)
+    assert [r['type'] for r in full['transactions']] == ['OPENING_BALANCE', 'PAYMENT']
+    assert full['balance_due'] == Decimal('150.25')
+    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).astimezone(timezone(timedelta(hours=5, minutes=30))).date()
+    ranged = statement(db, customer.id, start_date=yesterday)
+    assert ranged['opening_balance'] == Decimal('250.50')
+    assert len(ranged['transactions']) == 1
+    assert generate_statement_pdf(full).startswith(b'%PDF-')
+    with pytest.raises(ValueError, match='exceed'):
+        allocate_payment(db, customer.id, CustomerPaymentCreate(amount=Decimal('150.26')))
+    allocate_payment(db, customer.id, CustomerPaymentCreate(amount=Decimal('150.25')))
+    assert customer_totals(customer).balance_due == 0
+
+
+def test_opening_balance_paid_before_invoices_and_rollback(ledger_db):
+    db = ledger_db
+    customer = setup(db)
+    customer.opening_balance = Decimal('100')
+    customer.created_at = datetime.now(timezone.utc) - timedelta(days=10)
+    inv = invoice(db, customer, 'NEW', 200, days=2)
+    db.commit()
+    with pytest.raises(ValueError, match='precede'):
+        allocate_payment(db, customer.id, CustomerPaymentCreate(amount=Decimal('150'),
+            payment_date=datetime.now(timezone.utc) - timedelta(days=5)))
+    assert db.query(Payment).count() == 0
+    assert customer_totals(customer).balance_due == 300
+    payments = allocate_payment(db, customer.id, CustomerPaymentCreate(amount=Decimal('150')))
+    assert [(p.invoice_id, p.amount) for p in payments] == [(None, Decimal('100')), (inv.id, Decimal('50'))]
+    assert customer_totals(customer).balance_due == statement(db, customer.id)['balance_due'] == 150
+
+
+@pytest.mark.parametrize('amount', ['-1', '0.001', '10000000000', 'NaN', 'Infinity'])
+def test_invalid_opening_balance(amount):
+    from app.schemas.customer import CustomerCreate
+    with pytest.raises(ValueError):
+        CustomerCreate(name='Vendor', phone='9999999999', customer_type='VENDOR', opening_balance=amount)
+
+
 def test_customer_api_filter_summary_and_statement(ledger_db):
     from fastapi.testclient import TestClient
     from app.main import app
@@ -145,6 +195,38 @@ def test_customer_api_filter_summary_and_statement(ledger_db):
                 assert Decimal(str(result.json()['balance_due'])) == 60
                 pdf = client.get(f'/api/customers/{api_customer.id}/statement/pdf')
                 assert pdf.status_code == 200 and pdf.content.startswith(b'%PDF-')
+                baseline = client.get('/api/customers/khata/summary').json()
+                created = client.post('/api/customers', json={'name': 'Existing vendor', 'phone': '7777777777',
+                    'customer_type': 'VENDOR', 'opening_balance': '125.50'})
+                assert created.status_code == 201
+                assert Decimal(created.json()['balance_due']) == Decimal('125.50')
+                vendor_id = created.json()['id']
+                paid = client.post(f'/api/customers/{vendor_id}/payments', json={'amount': '25.50'})
+                assert paid.status_code == 201 and paid.json()[0]['invoice_id'] is None
+                updated = client.get('/api/customers/khata/summary').json()
+                assert Decimal(str(updated['total_receivables'])) == Decimal(str(baseline['total_receivables'])) + 100
+                assert Decimal(str(updated['collected_this_month'])) == Decimal(str(baseline['collected_this_month'])) + Decimal('25.50')
+                ledger = client.get(f'/api/customers/{vendor_id}/statement').json()
+                assert ledger['transactions'][0]['type'] == 'OPENING_BALANCE'
+                assert Decimal(str(ledger['balance_due'])) == 100
+                edited = client.put(f'/api/customers/{vendor_id}', json={
+                    'name': 'Updated vendor', 'shop_name': 'New shop', 'phone': '7777777778',
+                    'address': 'Updated address', 'state': 'Tamil Nadu', 'gstin': ''})
+                assert edited.status_code == 200
+                assert edited.json()['name'] == 'Updated vendor'
+                assert edited.json()['shop_name'] == 'New shop'
+                assert edited.json()['phone'] == '7777777778'
+                assert Decimal(edited.json()['opening_balance']) == Decimal('125.50')
+                assert Decimal(edited.json()['balance_due']) == 100
+                after_edit = client.get(f'/api/customers/{vendor_id}/statement').json()
+                assert after_edit['transactions'] == ledger['transactions']
+                duplicate_phone = client.put(f'/api/customers/{vendor_id}', json={'phone': api_customer.phone})
+                assert duplicate_phone.status_code == 400
+                assert client.get(f'/api/customers/{vendor_id}/statement/pdf').content.startswith(b'%PDF-')
+                blank = client.post('/api/customers', json={'name': 'New vendor', 'phone': '6666666666', 'customer_type': 'VENDOR'})
+                assert blank.status_code == 201 and Decimal(blank.json()['balance_due']) == 0
+                invalid = client.post('/api/customers', json={'name': 'Invalid', 'phone': '5555555555', 'opening_balance': '10'})
+                assert invalid.status_code == 422
                 app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=None, role=UserRole.INVENTORY_MANAGER, is_active=True)
                 assert client.post(f'/api/customers/{api_customer.id}/payments', json={'amount': '10'}).status_code == 403
         finally:

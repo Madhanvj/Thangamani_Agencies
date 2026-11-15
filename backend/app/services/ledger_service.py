@@ -13,11 +13,13 @@ IST = timezone(timedelta(hours=5, minutes=30))
 def customer_totals(customer):
     invoices = [i for i in customer.invoices if i.status != InvoiceStatus.CANCELLED]
     out = CustomerOut.model_validate(customer)
+    opening_paid = sum((p.amount for p in customer.opening_payments), ZERO)
     out.total_invoices = len(invoices)
-    out.total_billed = sum((i.grand_total for i in invoices), ZERO)
-    out.total_paid = sum((i.amount_paid for i in invoices), ZERO)
-    out.balance_due = sum((i.balance_due for i in invoices), ZERO)
-    out.total_spent = float(out.total_billed)
+    invoice_total = sum((i.grand_total for i in invoices), ZERO)
+    out.total_billed = invoice_total + customer.opening_balance
+    out.total_paid = sum((i.amount_paid for i in invoices), ZERO) + opening_paid
+    out.balance_due = sum((i.balance_due for i in invoices), ZERO) + customer.opening_balance - opening_paid
+    out.total_spent = float(invoice_total)
     return out
 
 
@@ -29,7 +31,9 @@ def allocate_payment(db, customer_id, data, user_id=None):
         invoices = (db.query(Invoice).filter(Invoice.customer_id == customer_id,
             Invoice.status != InvoiceStatus.CANCELLED, Invoice.balance_due > 0)
             .order_by(Invoice.invoice_date, Invoice.id).with_for_update().all())
-        if data.amount > sum((i.balance_due for i in invoices), ZERO):
+        opening_paid = db.query(Payment).filter(Payment.customer_id == customer_id).all()
+        opening_due = customer.opening_balance - sum((p.amount for p in opening_paid), ZERO)
+        if data.amount > opening_due + sum((i.balance_due for i in invoices), ZERO):
             raise ValueError('Payment cannot exceed outstanding balance.')
         paid_at = data.payment_date or datetime.now(timezone.utc)
         if paid_at.tzinfo is None:
@@ -38,6 +42,15 @@ def allocate_payment(db, customer_id, data, user_id=None):
             raise ValueError('Payment date cannot be in the future.')
         remaining = data.amount
         payments = []
+        if opening_due > ZERO:
+            if paid_at < aware(customer.created_at):
+                raise ValueError('Payment date cannot precede the opening balance entry.')
+            amount = min(remaining, opening_due)
+            payment = Payment(customer_id=customer.id, amount=amount, payment_mode=data.payment_mode,
+                payment_date=paid_at, reference_number=data.reference_number, notes=data.notes, created_by=user_id)
+            db.add(payment)
+            payments.append(payment)
+            remaining -= amount
         for invoice in invoices:
             if not remaining:
                 break
@@ -74,6 +87,13 @@ def statement(db, customer_id, start_date=None, end_date=None):
     invoices = (db.query(Invoice).options(selectinload(Invoice.payments))
         .filter(Invoice.customer_id == customer_id, Invoice.status != InvoiceStatus.CANCELLED).all())
     events = []
+    if customer.opening_balance:
+        events.append(dict(date=aware(customer.created_at), type='OPENING_BALANCE', id=customer.id,
+            description='Opening balance (existing dues)', debit=customer.opening_balance, credit=ZERO))
+    for pay in customer.opening_payments:
+        events.append(dict(date=aware(pay.payment_date), type='PAYMENT', id=pay.id,
+            description=f'{pay.payment_mode} - Opening balance', reference_number=pay.reference_number,
+            notes=pay.notes, debit=ZERO, credit=pay.amount))
     for inv in invoices:
         events.append(dict(date=aware(inv.invoice_date), type='INVOICE', id=inv.id,
             description=inv.invoice_number, debit=inv.grand_total, credit=ZERO))
@@ -81,7 +101,7 @@ def statement(db, customer_id, start_date=None, end_date=None):
             events.append(dict(date=aware(pay.payment_date), type='PAYMENT', id=pay.id,
                 description=f'{pay.payment_mode} - {inv.invoice_number}', reference_number=pay.reference_number,
                 notes=pay.notes, debit=ZERO, credit=pay.amount))
-    events.sort(key=lambda e: (e['date'], e['type'] != 'INVOICE', e['id']))
+    events.sort(key=lambda e: (e['date'], e['type'] == 'PAYMENT', e['id']))
     running = ZERO
     opening = ZERO
     rows = []
