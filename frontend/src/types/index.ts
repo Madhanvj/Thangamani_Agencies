@@ -87,6 +87,7 @@ export interface InventoryReport {
 }
 
 export interface Customer {
+  opening_balance?: number | string;
   customer_type?: 'RETAIL' | 'VENDOR';
   shop_name?: string | null;
   credit_limit?: number | string | null;
@@ -189,24 +190,10 @@ export interface InvoiceListResponse {
   pages: number;
 }
 
-export interface InvoicePreviewResult {
-  subtotal: number | string;
-  total_discount: number | string;
-  total_taxable: number | string;
-  is_interstate: boolean;
-  total_cgst: number | string;
-  total_sgst: number | string;
-  total_igst: number | string;
-  round_off: number | string;
-  grand_total: number | string;
-  grand_total_words: string;
-  items: any[];
-  tax_summary?: TaxSummaryItem[];
-}
-
 export interface Payment {
   id: number;
-  invoice_id: number;
+  invoice_id: number | null;
+  customer_id?: number | null;
   payment_date: string;
   amount: number | string;
   payment_mode: string;
@@ -260,6 +247,6 @@ export interface LedgerStatement {
   customer: Customer;
   opening_balance: number | string;
   balance_due: number | string;
-  transactions: { date: string; type: 'INVOICE' | 'PAYMENT'; id: number; description: string; reference_number?: string; notes?: string; debit: number | string; credit: number | string; balance: number | string }[];
+  transactions: { date: string; type: 'INVOICE' | 'PAYMENT' | 'OPENING_BALANCE'; id: number; description: string; reference_number?: string; notes?: string; debit: number | string; credit: number | string; balance: number | string }[];
 }
 export interface KhataSummary { total_vendors: number; total_receivables: number | string; collected_this_month: number | string }

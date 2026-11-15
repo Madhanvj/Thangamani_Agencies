@@ -166,7 +166,7 @@ export const Customers: React.FC = () => {
         }}
       >
         <div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
             Customer Directory
           </h2>
           <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>

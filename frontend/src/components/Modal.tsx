@@ -7,6 +7,7 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   size?: 'md' | 'lg';
+  className?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -15,6 +16,7 @@ export const Modal: React.FC<ModalProps> = ({
   title,
   children,
   size = 'md',
+  className = '',
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -31,7 +33,7 @@ export const Modal: React.FC<ModalProps> = ({
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className={`modal-dialog ${size === 'lg' ? 'modal-lg' : ''}`}
+        className={`modal-dialog ${size === 'lg' ? 'modal-lg' : ''} ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">

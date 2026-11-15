@@ -11,7 +11,6 @@ import type {
   CustomerListResponse,
   Invoice,
   InvoiceListResponse,
-  InvoicePreviewResult,
   Payment,
   DashboardMetrics,
   CompanySetting,
@@ -39,10 +38,6 @@ export const productsApi = {
     const res = await apiClient.get('/categories');
     return res.data;
   },
-  createCategory: async (data: { name: string; description?: string }): Promise<Category> => {
-    const res = await apiClient.post('/categories', data);
-    return res.data;
-  },
   getProducts: async (params?: {
     page?: number;
     limit?: number;
@@ -52,10 +47,6 @@ export const productsApi = {
     is_active?: boolean;
   }): Promise<ProductListResponse> => {
     const res = await apiClient.get('/products', { params });
-    return res.data;
-  },
-  getProduct: async (id: number): Promise<Product> => {
-    const res = await apiClient.get(`/products/${id}`);
     return res.data;
   },
   createProduct: async (data: Partial<Product>): Promise<Product> => {
@@ -81,10 +72,6 @@ export const inventoryApi = {
     reference?: string;
   }): Promise<StockMovement> => {
     const res = await apiClient.post('/inventory/adjust', data);
-    return res.data;
-  },
-  getLowStock: async (page = 1, limit = 50): Promise<Product[]> => {
-    const res = await apiClient.get('/inventory/low-stock', { params: { page, limit } });
     return res.data;
   },
   getReport: async (): Promise<InventoryReport> => {
@@ -117,10 +104,6 @@ export const customersApi = {
   },
   getCustomerByPhone: async (phone: string): Promise<Customer | null> => {
     const res = await apiClient.get(`/customers/by-phone/${encodeURIComponent(phone)}`);
-    return res.data;
-  },
-  getCustomer: async (id: number): Promise<Customer> => {
-    const res = await apiClient.get(`/customers/${id}`);
     return res.data;
   },
   getCustomerInvoices: async (id: number): Promise<Invoice[]> => {
@@ -164,19 +147,6 @@ export interface CreateInvoicePayload {
 }
 
 export const invoicesApi = {
-  previewInvoice: async (payload: {
-    customer_state: string;
-    items: {
-      product_id: number;
-      quantity: number;
-      unit_price?: number;
-      discount_type: DiscountType;
-      discount_value: number;
-    }[];
-  }): Promise<InvoicePreviewResult> => {
-    const res = await apiClient.post('/invoices/preview', payload);
-    return res.data;
-  },
   createInvoice: async (payload: CreateInvoicePayload): Promise<Invoice> => {
     const res = await apiClient.post('/invoices', payload);
     return res.data;
@@ -199,6 +169,14 @@ export const invoicesApi = {
   cancelInvoice: async (id: number): Promise<Invoice> => {
     const res = await apiClient.post(`/invoices/${id}/cancel`);
     return res.data;
+  },
+  deleteInvoice: async (id: number): Promise<void> => {
+    await apiClient.delete(`/invoices/${id}`);
+  },
+  /** Fetches the invoice PDF as a raw Blob (no auto-download). */
+  getPdfBlob: async (id: number): Promise<Blob> => {
+    const res = await apiClient.get(`/invoices/${id}/pdf`, { responseType: 'blob' });
+    return new Blob([res.data], { type: 'application/pdf' });
   },
   downloadPdf: async (id: number, invoiceNumber: string) => {
     const res = await apiClient.get(`/invoices/${id}/pdf`, { responseType: 'blob' });

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ShoppingBag, Lock, User, AlertCircle, ArrowRight, Eye, EyeOff } from 'lucide-react';
@@ -21,8 +22,19 @@ export const Login: React.FC = () => {
     try {
       await login(username, password);
       navigate('/');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Invalid username or password');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        const detail = err.response?.data?.detail;
+        if (!err.response || err.response.status >= 500) {
+          setError('Unable to reach the login service. Please try again shortly.');
+        } else if (err.response.status === 401) {
+          setError('Incorrect username or password');
+        } else {
+          setError(typeof detail === 'string' ? detail : 'Unable to sign in. Please try again.');
+        }
+      } else {
+        setError('Unable to sign in. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -58,15 +70,15 @@ export const Login: React.FC = () => {
         <div
           style={{
             background: 'linear-gradient(135deg, #4f46e5, #06b6d4)',
-            padding: '36px 32px 28px',
+            padding: '26px 24px 22px',
             color: 'white',
             textAlign: 'center',
           }}
         >
           <div
             style={{
-              width: '56px',
-              height: '56px',
+              width: '48px',
+              height: '48px',
               borderRadius: '16px',
               backgroundColor: 'rgba(255, 255, 255, 0.2)',
               display: 'flex',
@@ -77,7 +89,7 @@ export const Login: React.FC = () => {
               boxShadow: '0 8px 16px rgba(0, 0, 0, 0.1)',
             }}
           >
-            <ShoppingBag size={28} />
+            <ShoppingBag size={24} />
           </div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', margin: 0 }}>
             Thangamani Agencies
@@ -87,7 +99,7 @@ export const Login: React.FC = () => {
           </p>
         </div>
 
-        <div style={{ padding: '32px' }}>
+        <div style={{ padding: '24px' }}>
           {error && (
             <div
               style={{

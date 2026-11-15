@@ -54,7 +54,7 @@ export const InventoryReportPage: React.FC = () => {
         }}
       >
         <div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
             Inventory Valuation & Stock Report
           </h2>
           <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
@@ -76,7 +76,7 @@ export const InventoryReportPage: React.FC = () => {
           marginBottom: '28px',
         }}
       >
-        <div className="card" style={{ padding: '20px' }}>
+        <div className="card" style={{ padding: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)' }}>
               TOTAL CATALOG PRODUCTS
@@ -90,7 +90,7 @@ export const InventoryReportPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="card" style={{ padding: '20px' }}>
+        <div className="card" style={{ padding: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)' }}>
               TOTAL STOCK QUANTITY
@@ -104,7 +104,7 @@ export const InventoryReportPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="card" style={{ padding: '20px' }}>
+        <div className="card" style={{ padding: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)' }}>
               TOTAL STOCK VALUE (₹)
@@ -118,7 +118,7 @@ export const InventoryReportPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="card" style={{ padding: '20px' }}>
+        <div className="card" style={{ padding: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)' }}>
               LOW-STOCK ITEMS

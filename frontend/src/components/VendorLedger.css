@@ -1,0 +1,55 @@
+.modal-dialog.vendor-ledger-modal { max-width: 1120px; width: calc(100vw - 40px); }
+.vendor-ledger-modal .modal-header { padding: 16px 20px; }
+.vendor-ledger-modal .modal-header h3 { font-size: 1.25rem; }
+.vendor-ledger-modal .modal-body { padding: 20px; }
+.vendor-ledger { color: #0f172a; font-size: 0.9375rem; line-height: 1.5; }
+.vendor-ledger .btn { min-height: 38px; padding: 8px 14px; font-size: 0.88rem; }
+.vl-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 26px; }
+.vl-vendor { display: flex; gap: 16px; align-items: flex-start; min-width: 0; }
+.vl-avatar { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 16px; background: #e0e7ff; color: #4338ca; }
+.vl-vendor h2 { font-size: 1.5rem; line-height: 1.3; letter-spacing: -.03em; overflow-wrap: anywhere; margin-bottom: 6px; }
+.vl-vendor p { font-size: 0.88rem; color: #475569; overflow-wrap: anywhere; }
+.vl-vendor a { color: #4338ca; text-decoration: none; }
+.vl-filters { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; margin-bottom: 18px; }
+.vl-filter-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
+.vl-filter-title h3, .vl-table-title h3 { font-size: 1.05rem; font-weight: 650; }
+.vl-filter-title p, .vl-table-title p { color: #475569; font-size: 0.82rem; margin-top: 5px; }
+.vl-presets { display: flex; flex-wrap: wrap; gap: 8px; }
+.vl-presets button { border: 1px solid #cbd5e1; color: #334155; background: white; border-radius: 8px; min-height: 36px; padding: 8px 12px; font: inherit; font-size: 0.82rem; cursor: pointer; }
+.vl-presets button:hover, .vl-presets button[aria-pressed="true"] { border-color: #a5b4fc; background: #eef2ff; color: #3730a3; }
+.vl-date-fields { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 16px; }
+.vl-date-fields label { flex: 1; min-width: 180px; font-size: 0.88rem; font-weight: 550; }
+.vl-date-fields input { margin-top: 8px; font-size: 0.9375rem; min-height: 46px; padding: 10px 14px; background: white; }
+.vl-period { display: flex; justify-content: space-between; gap: 16px; margin: 26px 0 14px; font-size: 0.82rem; color: #475569; }
+.vl-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 26px; }
+.vl-summary > div { padding: 14px 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: white; }
+.vl-summary dt { display: flex; align-items: center; gap: 5px; color: #475569; font-size: 0.82rem; font-weight: 550; margin-bottom: 12px; }
+.vl-summary dd { font-size: 1.4rem; font-weight: 700; letter-spacing: -.035em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.vl-summary small { display: block; color: #475569; font-size: 0.8rem; margin-top: 8px; }
+.vl-paid { color: #047857; }
+.vl-summary .vl-closing { background: #eef2ff; border-color: #c7d2fe; color: #312e81; }
+.vl-summary .vl-closing dt { color: #4338ca; }
+.vl-transactions { border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; }
+.vl-table-title { padding: 20px; border-bottom: 1px solid #e2e8f0; }
+.vl-table-scroll { overflow: auto; max-height: 480px; }
+.vl-transactions table { width: 100%; border-collapse: collapse; min-width: 760px; text-align: left; }
+.vl-transactions thead th { position: sticky; top: 0; z-index: 1; background: #f1f5f9; color: #334155; font-size: 0.82rem; font-weight: 650; padding: 16px; white-space: nowrap; }
+.vl-transactions td { padding: 20px 16px; border-bottom: 1px solid #e2e8f0; font-size: 0.88rem; vertical-align: top; }
+.vl-transactions th:nth-child(n+3), .vl-transactions td:nth-child(n+3) { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vl-transactions td:first-child { white-space: nowrap; color: #475569; }
+.vl-transactions td:nth-child(2) { min-width: 230px; max-width: 360px; overflow-wrap: anywhere; }
+.vl-transactions tbody tr:hover { background: #f8fafc; }
+.vl-type { display: inline-block; background: #eef2ff; color: #4338ca; padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 650; margin-bottom: 8px; }
+.vl-type-payment { color: #065f46; background: #d1fae5; }
+.vl-description { display: block; color: #0f172a; font-size: 0.88rem; font-weight: 600; text-decoration: none; }
+ a.vl-description { color: #4338ca; text-decoration: underline; text-underline-offset: 3px; }
+.vl-row-detail { display: block; margin-top: 6px; color: #475569; font-size: 0.82rem; white-space: pre-wrap; }
+.vl-transactions tfoot th, .vl-transactions tfoot td { padding: 14px 16px; font-size: 0.88rem; font-weight: 700; background: #eef2ff; border: 0; }
+.vl-transactions tfoot td { text-align: right; font-variant-numeric: tabular-nums; }
+.vl-loading, .vl-empty { padding: 44px 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; color: #475569; }
+.vl-empty h3 { font-size: 1.1rem; color: #0f172a; }
+.vl-footnote { color: #475569; font-size: 0.82rem; margin-top: 16px; }
+.vl-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.vendor-ledger button:focus-visible, .vendor-ledger a:focus-visible { outline: 3px solid #818cf8; outline-offset: 3px; }
+@media (max-width: 850px) { .vl-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .vl-filter-title { flex-direction: column; } .vl-header { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 500px) { .modal-dialog.vendor-ledger-modal { width: calc(100vw - 20px); } .vendor-ledger-modal .modal-body, .vendor-ledger-modal .modal-header { padding: 18px; } .vl-vendor h2 { font-size: 1.35rem; } .vl-avatar { width: 44px; height: 44px; } .vl-filters { padding: 16px; } .vl-summary { gap: 10px; } .vl-summary > div { padding: 16px 12px; } .vl-summary dd { font-size: 1.3rem; } .vl-date-fields label { min-width: 100%; } .vl-period { flex-direction: column; gap: 4px; } }

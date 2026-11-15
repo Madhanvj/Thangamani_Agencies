@@ -1,0 +1,67 @@
+.vendor-khata { max-width: none; margin: 0 auto; font-size: 0.88rem; }
+.khata-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0; }
+.khata-heading h1 { font-size: 1.4rem; letter-spacing: -0.02em; margin: 6px 0; }
+.khata-heading p, .khata-toolbar p { color: #475569; font-size: 0.88rem; line-height: 1.5; }
+.vendor-khata .khata-kpis { margin: 16px 0; gap: 12px; }
+.khata-metric { position: relative; padding: 14px 16px; overflow: hidden; border-radius: var(--radius-lg); border: 1px solid #dbe3ef; box-shadow: var(--shadow-sm); }
+.khata-metric > svg { position: absolute; right: 14px; top: 14px; color: var(--primary); background: var(--primary-light); padding: 7px; width: 32px; height: 32px; border-radius: var(--radius-md); }
+.khata-metric p { font-size: 0.82rem; font-weight: 600; color: #475569; margin-bottom: 8px; padding-right: 36px; }
+.khata-metric h2 { font-size: 1.35rem; letter-spacing: -.035em; margin-bottom: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.khata-metric-due { background: #eef2ff; border-color: #c7d2fe; }
+.khata-metric-due h2 { color: #3730a3; }
+.khata-metric-paid > svg { color: var(--success-text); background: var(--success-light); }
+.khata-directory { padding: 0; overflow: hidden; border-radius: var(--radius-lg); border: 1px solid #dbe3ef; box-shadow: var(--shadow-sm); }
+.khata-toolbar { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border-color); }
+.khata-toolbar h2 { font-size: 1.1rem; margin-bottom: 4px; letter-spacing: -.025em; }
+.khata-count { display: inline-block; background: var(--primary-light); color: var(--primary-text); padding: 3px 8px; border-radius: 20px; font-size: 0.75rem; margin-left: 6px; vertical-align: middle; }
+.khata-search { position: relative; width: 320px; max-width: 100%; flex-shrink: 0; }
+.khata-search > svg { position: absolute; left: 12px; top: 10px; color: #475569; }
+.khata-search input { padding: 9px 32px 9px 38px; font-size: 0.88rem; min-height: auto; border-radius: var(--radius-md); }
+.khata-search button, .khata-notice button { border: 0; background: transparent; font-size: 22px; cursor: pointer; color: inherit; }
+.khata-search button { position: absolute; right: 8px; top: 3px; width: 28px; height: 30px; }
+.khata-account-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; padding: 14px; background: #f8fafc; }
+.khata-account { min-width: 0; display: flex; flex-direction: column; padding: 12px 16px; background: white; border: 1px solid #dbe3ef; border-radius: var(--radius-lg); box-shadow: 0 2px 6px rgb(15 23 42 / 3%); }
+.khata-account-heading { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.khata-account-heading > div { flex: 1; min-width: 0; }
+.khata-card-tools { display: flex; align-items: center; gap: 4px; }
+.khata-edit { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 4px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: white; color: var(--text-muted); cursor: pointer; flex-shrink: 0; }
+.khata-edit:hover { color: var(--primary); background: var(--primary-light); }
+.khata-edit:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.khata-avatar { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: var(--radius-md); background: #eef2ff; color: #4338ca; font-size: 12px; font-weight: 700; }
+.khata-account h3 { font-size: 15px; line-height: 1.4; letter-spacing: -.02em; overflow-wrap: anywhere; font-weight: 600; }
+.khata-account-heading p { margin-top: 2px; color: #475569; font-size: 12px; overflow-wrap: anywhere; }
+.khata-account-status { flex-shrink: 0; border-radius: 20px; padding: 2px 8px; font-size: 11px; font-weight: 600; line-height: 1.4; }
+.khata-account-status.is-pending { color: #92400e; background: #fef3c7; }
+.khata-account-status.is-settled { color: #065f46; background: #d1fae5; }
+.khata-account-contact { display: flex; flex-wrap: wrap; gap: 4px 8px; color: #475569; font-size: 11px; margin: 8px 0; overflow-wrap: anywhere; }
+.khata-account-contact a { color: #334155; text-decoration: none; font-size: 12px; font-weight: 500; }
+.khata-account-contact a:hover { color: var(--primary); text-decoration: underline; }
+.khata-account-balance { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); align-items: center; gap: 2px 8px; padding: 8px 12px; background: #eef2ff; border: 1px solid #e0e7ff; border-radius: var(--radius-md); margin-top: auto; }
+.khata-account-balance > span { font-size: 12px; font-weight: 500; color: #4338ca; }
+.khata-account-balance strong { display: block; text-align: right; font-size: 18px; line-height: 1.3; color: #312e81; letter-spacing: -.03em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; font-weight: 700; }
+.khata-account-balance small { grid-column: 1 / -1; display: block; font-size: 11px; color: #475569; margin-top: 2px; line-height: 1.5; }
+.khata-account-balance.is-settled { background: #f0fdf4; border-color: #dcfce7; }
+.khata-account-balance.is-settled > span, .khata-account-balance.is-settled strong { color: #166534; }
+.khata-account-totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 8px 0; }
+.khata-account-totals > div + div { text-align: right; border-left: 1px solid var(--border-color); padding-left: 10px; }
+.khata-account-totals dt { font-size: 11px; color: #475569; margin-bottom: 2px; }
+.khata-account-totals dd { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.khata-paid { color: #047857; }
+.khata-account-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 8px; border-top: 1px solid var(--border-color); }
+.khata-account-actions svg { width: 14px; height: 14px; flex-shrink: 0; }
+.khata-account-actions .btn { padding: 6px 10px; gap: 4px; font-size: 12px; line-height: 1.4; }
+.khata-pagination { padding: 0 16px; }
+.khata-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 40px 20px; color: #475569; font-size: 0.88rem; }
+.khata-empty h3 { color: var(--text-main); font-size: 1.1rem; }
+.khata-notice { background: var(--success-light); color: var(--success-text); padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 0.88rem; }
+.khata-form { font-size: 0.88rem; }
+.khata-form > .form-label { display: block; margin-top: 16px; }
+.khata-form > .btn { margin-top: 20px; width: 100%; min-height: auto; font-size: 0.88rem; }
+.khata-payment-summary { background: var(--primary-light); padding: 16px; border-radius: var(--radius-md); display: flex; align-items: flex-start; flex-direction: column; gap: 8px; color: var(--primary-text); }
+.khata-payment-summary span { font-size: 0.82rem; }
+.khata-payment-summary strong { font-size: 1.5rem; letter-spacing: -.03em; overflow-wrap: anywhere; }
+.khata-payment-summary button { background: white; color: var(--primary-text); border: 1px solid #c7d2fe; border-radius: 8px; padding: 7px 12px; font-size: 0.82rem; cursor: pointer; }
+.khata-payment-hint { margin-top: 8px; color: #475569; font-size: 0.75rem; line-height: 1.5; }
+@media (max-width: 1150px) { .khata-toolbar { flex-direction: column; align-items: stretch; } .khata-search { width: 100%; } }
+@media (max-width: 700px) { .khata-heading { align-items: flex-start; flex-direction: column; gap: 14px; } .khata-heading h1 { font-size: 1.4rem; } .khata-toolbar { padding: 14px; } .khata-metric { padding: 14px 16px; } .khata-account-grid { padding: 12px; gap: 12px; } .khata-account-heading { align-items: start; } .khata-pagination { padding: 0 16px; } }
+@media (max-width: 360px) { .khata-account-grid { grid-template-columns: minmax(0, 1fr); } .khata-account-heading { grid-template-columns: 32px minmax(0, 1fr); } .khata-card-tools { grid-column: 2; justify-self: start; } .khata-account-actions { grid-template-columns: 1fr; } }

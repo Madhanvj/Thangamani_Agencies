@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { invoicesApi, settingsApi, paymentsApi } from '../api';
 import type { Invoice, CompanySetting, Payment } from '../types';
-import { formatCurrency, formatDate, formatDateOnly } from '../utils/formatters';
+import { formatCurrency, formatDate, formatDateOnly, sendWhatsAppInvoice } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 import {
   Printer,
@@ -11,6 +11,7 @@ import {
   XCircle,
   CreditCard,
   AlertTriangle,
+  MessageCircle,
 } from 'lucide-react';
 import { Modal } from '../components/Modal';
 
@@ -155,6 +156,34 @@ export const InvoiceView: React.FC = () => {
           <button onClick={handleDownloadPdf} className="btn btn-primary">
             <Download size={16} /> Download PDF
           </button>
+          {invoice.customer?.phone && (
+            <button
+              onClick={() =>
+                sendWhatsAppInvoice({
+                  invoiceId: invoice.id,
+                  invoiceNumber: invoice.invoice_number,
+                  phone: invoice.customer!.phone,
+                  customerName: invoice.customer?.name || 'Customer',
+                  grandTotal: invoice.grand_total,
+                  balanceDue: invoice.balance_due,
+                  fetchPdfBlob: invoicesApi.getPdfBlob,
+                })
+              }
+              className="btn"
+              title="Send invoice PDF via WhatsApp"
+              style={{
+                background: '#16a34a',
+                color: '#fff',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              <MessageCircle size={16} /> WhatsApp
+            </button>
+          )}
           {canModify && !isCancelled && parseFloat(String(invoice.balance_due)) > 0 && (
             <button
               onClick={() => setShowPaymentModal(true)}

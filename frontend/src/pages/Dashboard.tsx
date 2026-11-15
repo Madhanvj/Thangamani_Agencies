@@ -70,7 +70,7 @@ export const Dashboard: React.FC = () => {
         }}
       >
         <div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
             Store Overview
           </h2>
           <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
@@ -133,7 +133,7 @@ export const Dashboard: React.FC = () => {
           marginBottom: '28px',
         }}
       >
-        <div className="card" style={{ padding: '20px' }}>
+        <div className="card" style={{ padding: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)' }}>
               TODAY'S REVENUE
@@ -161,7 +161,7 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="card" style={{ padding: '20px' }}>
+        <div className="card" style={{ padding: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)' }}>
               THIS MONTH'S SALES
@@ -189,7 +189,7 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="card" style={{ padding: '20px' }}>
+        <div className="card" style={{ padding: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)' }}>
               TOTAL INVOICES
@@ -217,7 +217,7 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="card" style={{ padding: '20px' }}>
+        <div className="card" style={{ padding: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)' }}>
               PENDING PAYMENTS
@@ -251,7 +251,7 @@ export const Dashboard: React.FC = () => {
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
-          gap: '24px',
+          gap: '20px',
         }}
       >
         {/* 30-Day Sales Trend Chart */}
@@ -260,7 +260,7 @@ export const Dashboard: React.FC = () => {
             <h3 className="card-title">30-Day Sales Trend</h3>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Daily Gross Revenue</span>
           </div>
-          <div style={{ height: '280px', width: '100%' }}>
+          <div style={{ height: '250px', width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>

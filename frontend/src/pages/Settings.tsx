@@ -75,7 +75,7 @@ export const SettingsPage: React.FC = () => {
   return (
     <div className="page-container">
       <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+        <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
           Company & Tax Settings
         </h2>
         <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
